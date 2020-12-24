@@ -202,7 +202,7 @@ int main(int argc, char **argv)
             calc_Var_Cov_matrix<<<HORIZON, HORIZON>>>(device_cov, d_dataFromBlocks, Us_device, Blocks);
             cudaDeviceSynchronize();
             cudaMemcpy(h_hat_Q, device_cov, sizeof(float)*dim_hat_Q, cudaMemcpyDeviceToHost);
-            printMatrix(m,m,h_hat_Q, lda, "DA");
+            //printMatrix(m,m,h_hat_Q, lda, "DA");
             
             //cudaStat1 = cudaMemcpy(d_A, h_hat_Q, sizeof(float) * lda * m, cudaMemcpyHostToDevice);
             cudaStat1 = cudaMemcpy(d_A, h_hat_Q, sizeof(float) * lda * m, cudaMemcpyHostToDevice);
@@ -248,12 +248,13 @@ int main(int argc, char **argv)
             //assert(cudaSuccess == cudaStat3);
             // printMatrix(m,1,eig_vec, lda, "C");
             // printf("=====Upper is eigen value====");
-            // printMatrix(m,m,Diag_D, lda, "C");
+            //printMatrix(m,m,Diag_D, lda, "C");
             make_Diagonalization<<<HORIZON,HORIZON>>>(d_W, d_A);
             cudaMemcpy(h_hat_Q, d_A, sizeof(float)*lda*m, cudaMemcpyDeviceToHost);
             //printMatrix(m,m,h_hat_Q, lda, "C");
             cudaMemcpy(device_diag_eig, h_hat_Q, sizeof(float)*dim_hat_Q, cudaMemcpyHostToDevice);
-            cudaMemcpy(device_cov, Diag_D, sizeof(float)*dim_hat_Q, cudaMemcpyHostToDevice);
+            cudaMemcpy(d_hat_Q, Diag_D, sizeof(float)*dim_hat_Q, cudaMemcpyHostToDevice);
+            tanspose<<<HORIZON,HORIZON>>>(device_cov, d_hat_Q);
             pwr_matrix_answerB<<<HORIZON,HORIZON>>>(device_cov, device_diag_eig);
             cudaDeviceSynchronize();
 
@@ -274,7 +275,7 @@ int main(int argc, char **argv)
             //cudaMemcpy(h_hat_Q, device_diag_eig, sizeof(float)*dim_hat_Q, cudaMemcpyDeviceToHost);
             cudaMemcpy(h_hat_Q, d_hat_Q, sizeof(float)*dim_hat_Q, cudaMemcpyDeviceToHost);
             //cudaMemcpy(d_hat_Q, h_hat_Q, sizeof(float)*dim_hat_Q, cudaMemcpyHostToDevice);
-            //printMatrix(m,m,h_hat_Q, lda, "C");
+            printMatrix(m,m,h_hat_Q, lda, "C");
 
             fprintf(fp,"%f %f %f %f %f %f %f %f %f %f\n",Us_host[0], Us_host[1],
                     Us_host[2], Us_host[3], Us_host[4], Us_host[5], Us_host[6], Us_host[7], Us_host[8], Us_host[9]);

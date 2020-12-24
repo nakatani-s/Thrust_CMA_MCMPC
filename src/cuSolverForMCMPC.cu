@@ -9,7 +9,12 @@ __global__ void make_Diagonalization(float *vec, float *mat)
     unsigned int id = threadIdx.x + blockDim.x * blockIdx.x;
     if(threadIdx.x == blockIdx.x)
     {
-        mat[id] = sqrtf(vec[threadIdx.x]);
+        //printf("eig_val == %f\n", vec[threadIdx.x]);
+        if(vec[threadIdx.x] < 0.0f){
+            mat[id] = 0.0f;
+        }else{
+            mat[id] = sqrtf(vec[threadIdx.x]);
+        }
     }else{
         mat[id] = 0.0f;
     }
@@ -68,19 +73,19 @@ __global__ void pwr_matrix_answerB(float *A, float *B)
 {
     unsigned int id = threadIdx.x + blockDim.x * blockIdx.x;
     int row_index, column_index;
-    float pows;
+    float pows = 0.0f;
     if(blockIdx.x == 0)
     {
         row_index = (int)blockDim.x * blockIdx.x;
-    }else{
+    }/*else{
         row_index = ((int)blockDim.x * blockIdx.x) -1;
-    }
+    }*/
     if(threadIdx.x == 0)
     {
         column_index = (int)blockDim.x * threadIdx.x;
-    }else{
+    }/*else{
         column_index = ((int)blockDim.x * threadIdx.x) -1;
-    }
+    }*/
     for(int k = 0; k < HORIZON; k++){
         //row[id] += A[column_index + k] * B[row_index + k];
         pows += A[column_index + k] * B[row_index + k];
@@ -99,19 +104,19 @@ __global__ void pwr_matrix_answerA(float *A, float *B)
 {
     unsigned int id = threadIdx.x + blockDim.x * blockIdx.x;
     int row_index, column_index;
-    float pows;
+    float pows = 0.0f;
     if(blockIdx.x == 0)
     {
         row_index = (int)blockDim.x * blockIdx.x;
-    }else{
+    }/*else{
         row_index = ((int)blockDim.x * blockIdx.x) -1;
-    }
+    }*/
     if(threadIdx.x == 0)
     {
         column_index = (int)blockDim.x * threadIdx.x;
-    }else{
+    }/*else{
         column_index = ((int)blockDim.x * threadIdx.x) -1;
-    }
+    }*/
     for(int k = 0; k < HORIZON; k++){
         //row[id] += A[column_index + k] * B[row_index + k];
         pows += A[column_index + k] * B[row_index + k];
