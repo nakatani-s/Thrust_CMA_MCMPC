@@ -95,6 +95,7 @@ int main(int argc, char **argv)
     //Input_vec *h_Input_vec;
     //h_Input_vec = (Input_vec *)malloc(sizeof(Input_vec) * N_OF_SAMPLES);
     cudaMalloc(&d_Input_vec, sizeof(Input_vec) * N_OF_SAMPLES);
+    set_Input_vec<<<N_OF_SAMPLES,1>>>(d_Input_vec, 0.0f);
 
     /*for(int i = 0; i < N_OF_SAMPLES; i++){
         for(int k = 0; k < HORIZON; k++){
@@ -177,14 +178,13 @@ int main(int argc, char **argv)
 
     for(int time = 0; time < TIME; time++){
         for(int repeat = 0; repeat < Recalc; repeat++){
-            //var = Variavility * pow(0.95,repeat);
-            var = Variavility;
+            var = Variavility * pow(0.8,repeat);
+            //var = Variavility;
             cudaMemcpy(d_dataFromBlocks, h_dataFromBlocks, sizeof(Data1)*numBlocks, cudaMemcpyHostToDevice);
             cudaDeviceSynchronize();
             // MCMPC_GPU<<<numBlocks, THREAD_PER_BLOCKS>>>(state, devStates, d_dataFromBlocks, var, Blocks, d_hat_Q);
 #ifdef USING_THRUST
-            Using_Thrust_MCMPC_Linear<<<numBlocks, THREAD_PER_BLOCKS>>>(state[0],state[1],state[2],devStates, d_Input_vec, var, Blocks, d_hat_Q, device_param, device_matrix, 
-                                                                        thrust::raw_pointer_cast( cost_device_vec_for_sorting.data() ));
+            Using_Thrust_MCMPC_Linear<<<numBlocks, THREAD_PER_BLOCKS>>>(state[0],state[1],state[2],devStates, d_Input_vec, var, Blocks, d_hat_Q, device_param, device_matrix, thrust::raw_pointer_cast( cost_device_vec_for_sorting.data() ));
             thrust::sequence( indices_device_vec.begin(), indices_device_vec.end() );
             thrust::sort_by_key( cost_device_vec_for_sorting.begin(), cost_device_vec_for_sorting.end(), indices_device_vec.begin() );
             callback_elite_sample<<<Blocks,1>>>(d_dataFromBlocks, d_Input_vec, thrust::raw_pointer_cast( indices_device_vec.data() ));
@@ -194,6 +194,7 @@ int main(int argc, char **argv)
             //cudaMemcpy(h_dataFromBlocks, d_dataFromBlocks, sizeof(Data1) * numBlocks, cudaMemcpyDeviceToHost);
 #endif
             cudaMemcpy(h_dataFromBlocks, d_dataFromBlocks, sizeof(Data1) * numBlocks, cudaMemcpyDeviceToHost);
+            printf("TOP  W == %f WORST W == %f\n",h_dataFromBlocks[0].W,  h_dataFromBlocks[Blocks-1].W);
             weighted_mean(h_dataFromBlocks, Blocks, Us_host);
             //printMatrix(m,1,Us_host, m, "u");
             cudaMemcpy(Us_device, Us_host, sizeof(float) * HORIZON, cudaMemcpyHostToDevice);
@@ -281,6 +282,10 @@ int main(int argc, char **argv)
             for(int count = 0; count < HORIZON; count++){
                 h_dataFromBlocks[0].Input[count] = Us_host[count];
             }
+#ifdef USING_THRUST
+                reset_Input_vec<<<numBlocks,THREAD_PER_BLOCKS>>>(d_Input_vec, Us_device);
+                cudaDeviceSynchronize();
+#endif
 
 #ifdef Linear
             float RSME=0.0f;
@@ -305,10 +310,13 @@ int main(int argc, char **argv)
     if (d_W    ) cudaFree(d_W);
     if (devInfo) cudaFree(devInfo);
     if (d_work ) cudaFree(d_work);
+    //cudaFree(indices_device_vec);
+    //cudaFree(cost_device_vec_for_sorting);
 
     if (cusolverH) cusolverDnDestroy(cusolverH);
     fclose(fp);
     // fclose(hp);
+    //thrust::reduce(indices_device_vec,cost_device_vec_for_sorting);
     cudaDeviceReset();
     printf("%s\n", cudaGetErrorString(cudaGetLastError()));
     return 0;

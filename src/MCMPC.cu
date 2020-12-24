@@ -42,7 +42,12 @@ void weighted_mean(Data1 *h_Data, int Blocks, float *Us_host)
             }else{
                 temp[i] += h_Data[k].W * h_Data[k].Input[i] / total_weight;
             }
-            Us_host[i] = temp[i]; 
+            if(isnan(temp[i]))
+            {
+               Us_host[i] = 0.0f;
+            }else{
+               Us_host[i] = temp[i];
+            } 
         }
     }
 }
@@ -195,8 +200,8 @@ __global__ void Using_Thrust_MCMPC_Linear(float x, float y, float w, curandState
                                           float *d_cov, float *d_param, float *d_matrix, float *cost_vec){
 
     unsigned int id = threadIdx.x + blockDim.x * blockIdx.x;
-    int seq;
-    seq = (int)id;
+    unsigned int seq;
+    seq = id;
     float qx = 0.0f;
     float total_cost = 0.0f;
     float u[HORIZON]= { };
@@ -206,6 +211,7 @@ __global__ void Using_Thrust_MCMPC_Linear(float x, float y, float w, curandState
     float d_state_here[dim_state] = {x,y,w};
     float get_state[dim_state] = {};
     float z[HORIZON] = { };
+    cost_vec[id] = 0.0f;
 
     for(int t = 0; t < HORIZON; t++)
     {
@@ -231,13 +237,18 @@ __global__ void Using_Thrust_MCMPC_Linear(float x, float y, float w, curandState
 
         qx = 0.0f;
     }
-
+    if(isnan(total_cost))
+    {
+       total_cost = 100000;
+    }
     float KL_COST, S, lambda;
     lambda = HORIZON * dim_state;
+    //lambda = 10.0f;
     S = total_cost / lambda;
     KL_COST = exp(-S);
     /*W_comp[threadIdx.x] = KL_COST;
     L_comp[threadIdx.x] = total_cost;*/
+
     __syncthreads();
     d_Datas[id].W = KL_COST;
     //d_Datas[id].L = total_cost;
@@ -264,6 +275,13 @@ __global__ void callback_elite_sample(Data1 *d_Datas, Input_vec *dst, int *elite
     d_Datas[id].W =  dst[elite_indices[id]].W;
     for(int i = 0; i < HORIZON; i++){
         d_Datas[id].Input[i] = dst[elite_indices[id]].Input[i];
+    }
+}
+
+__global__ void reset_Input_vec(Input_vec *d_Input_vec, float *opt){
+   unsigned int id = threadIdx.x + blockDim.x * blockIdx.x;
+   for(int i = 0; i < HORIZON; i++){
+        d_Input_vec[id].Input[i] = opt[i];
     }
 }
 #endif

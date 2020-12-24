@@ -28,10 +28,10 @@ __global__ void calc_Var_Cov_matrix(float *d_mat,Data1 *d_Data, float *Us_dev, i
     {
         pows +=  (d_Data[z].Input[threadIdx.x] - Us_dev[threadIdx.x]) * (d_Data[z].Input[blockIdx.x] - Us_dev[blockIdx.x]);
     }
-    if(threadIdx.x == blockIdx.x && pows < 0.00001f){
+    /*if(threadIdx.x == blockIdx.x && pows < 0.00001f){
         pows += (Blocks -1);
         //pows = d_mat[id];
-    }
+    }*/
     __syncthreads();
     
     d_mat[id] = pows  /(Blocks - 1);
